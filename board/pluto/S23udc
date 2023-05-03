@@ -5,8 +5,10 @@ source /etc/device_config
 CONFIGFS=/sys/kernel/config/usb_gadget
 GADGET=$CONFIGFS/composite_gadget
 IIOD_OPTS="-D -n $ENDPOINTS -F /dev/iio_ffs"
+SDR_USB_GADGET_OPTS="/dev/sdr_gadget_ffs"
 UDC_HANDLE_SUSPEND=`fw_printenv -n udc_handle_suspend 2> /dev/null || echo 0`
 USB_ETH_MODE=`fw_printenv -n usb_ethernet_mode 2> /dev/null || echo 0`
+SDR_USB_GADGET_DEBUG=`fw_printenv -n sdr_usb_gadget_debug 2> /dev/null || echo 0`
 
 if [ "$USB_ETH_MODE" == "ncm" ]
 then
@@ -85,6 +87,7 @@ case "$1" in
 	echo $serial > $GADGET/strings/0x409/serialnumber
 
 	mkdir -p $GADGET/functions/ffs.iio_ffs
+	mkdir -p $GADGET/functions/ffs.sdr_gadget_ffs
 	mkdir -p $GADGET/functions/acm.usb0
 	mkdir -p $GADGET/functions/$USB_NET_FUNCTION
 	mkdir -p $GADGET/functions/mass_storage.0
@@ -100,7 +103,7 @@ case "$1" in
 
 	mkdir -p $GADGET/configs/c.1
 	mkdir -p $GADGET/configs/c.1/strings/0x409
-	echo "RNDIS/MSD/ACM/IIOUSBD" > $GADGET/configs/c.1/strings/0x409/configuration
+	echo "RNDIS/MSD/ACM/IIOUSBD/SDRGADGET" > $GADGET/configs/c.1/strings/0x409/configuration
 
 	# In case the M2k is powered via the Power USB, advertise low power on the DATA USB
 	if [ "$TARGET" == "m2k" ]; then
@@ -114,11 +117,23 @@ case "$1" in
 	ln -s $GADGET/functions/mass_storage.0 $GADGET/configs/c.1
 	ln -s $GADGET/functions/acm.usb0 $GADGET/configs/c.1
 	ln -s $GADGET/functions/ffs.iio_ffs $GADGET/configs/c.1/ffs.iio_ffs
+	ln -s $GADGET/functions/ffs.sdr_gadget_ffs $GADGET/configs/c.1/ffs.sdr_gadget_ffs
 
 	mkdir -p /dev/iio_ffs
 	mount iio_ffs -t functionfs /dev/iio_ffs 2> /dev/null
 
+	mkdir -p /dev/sdr_gadget_ffs
+	mount sdr_gadget_ffs -t functionfs /dev/sdr_gadget_ffs 2> /dev/null
+
 	start-stop-daemon -S -b -q -m -p /var/run/iiod.pid -x  /usr/sbin/iiod  -- $IIOD_OPTS
+	if [ "$SDR_USB_GADGET_DEBUG" == "1" ]
+	then
+		# Launch SDR USB gadget, logging to file
+		start-stop-daemon -S -b -q -m -p /var/run/sdr_usb_gadget.pid --startas /bin/sh -- -c "exec /usr/sbin/sdr_usb_gadget -d $SDR_USB_GADGET_OPTS > /var/log/sdr_usb_gadget.log 2>&1"
+	else
+		# Launch SDR USB gadget, without logging
+		start-stop-daemon -S -b -q -m -p /var/run/sdr_usb_gadget.pid -x  /usr/sbin/sdr_usb_gadget -- $SDR_USB_GADGET_OPTS
+	fi
 	sleep 0.2
 
 	echo ci_hdrc.0 > $GADGET/UDC
@@ -139,16 +154,19 @@ case "$1" in
 
 	echo "" > $GADGET/UDC
 	start-stop-daemon -K -q -p /var/run/iiod.pid 2>/dev/null
+	start-stop-daemon -K -q -p /var/run/sdr_usb_gadget.pid 2>/dev/null
 
 	rm $GADGET/configs/c.1/$USB_NET_FUNCTION
 	rm $GADGET/configs/c.1/mass_storage.0
 	rm $GADGET/configs/c.1/acm.usb0
 	rm $GADGET/configs/c.1/ffs.iio_ffs
+	rm $GADGET/configs/c.1/ffs.sdr_gadget_ffs
 
 	rmdir $GADGET/strings/0x409
 	rmdir $GADGET/configs/c.1/strings/0x409
 	rmdir $GADGET/configs/c.1
 
+	rmdir $GADGET/functions/ffs.sdr_gadget_ffs
 	rmdir $GADGET/functions/ffs.iio_ffs
 	#rmdir $GADGET/functions/acm.usb0
 	rmdir $GADGET/functions/$USB_NET_FUNCTION

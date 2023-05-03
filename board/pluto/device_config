@@ -1,5 +1,5 @@
 #S23udc
-PRODUCT="PlutoSDR (ADALM-PLUTO)"
+PRODUCT="PlutoSDR (ADALM-PLUTO) with timestamp support"
 USBPID=0xb673
 ENDPOINTS=3
 
