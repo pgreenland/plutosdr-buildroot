@@ -1,0 +1,6 @@
+config BR2_PACKAGE_SDR_IP_GADGET
+        bool "sdr_ip_gadget"
+        select BR2_PACKAGE_LIBIIO
+        help
+          Low latency SDR streaming gadget. Transferring IIO buffer
+          objects via UDP IP datagrams as fast as possible.
