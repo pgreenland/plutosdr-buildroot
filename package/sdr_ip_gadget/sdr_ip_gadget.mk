@@ -1,5 +1,5 @@
 SDR_IP_GADGET_VERSION = 1.0
-SDR_IP_GADGET_SITE = ssh://git@gitlab.quantulum.co.uk:2222/homework/plutosdr/plutosdr-sdr-ip-gadget.git
+SDR_IP_GADGET_SITE = https://github.com/pgreenland/pluto-sdr-ip-gadget.git
 SDR_IP_GADGET_SITE_METHOD = git
 SDR_IP_GADGET_VERSION = 9b3864db0898e9e5c38659d45cc02babb5548541
 SDR_IP_GADGET_DEPENDENCIES = libiio
